@@ -1,0 +1,77 @@
+name: Build Roohi APK
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Flutter Version
+        run: flutter --version
+
+      - name: Extract ZIP (if needed)
+        run: |
+          if [ -f Roohi_APK_Ready.zip ]; then
+            unzip -o Roohi_APK_Ready.zip -d extracted
+            cp -r extracted/* .
+          fi
+
+      - name: Create pubspec if missing
+        run: |
+          if [ ! -f pubspec.yaml ]; then
+            cat > pubspec.yaml << 'EOF'
+name: roohi
+description: AI Assistant
+publish_to: "none"
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+EOF
+          fi
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze || true
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Roohi-APK
+          path: build/app/outputs/flutter-apk/app-release.apk
